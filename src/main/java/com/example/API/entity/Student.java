@@ -1,50 +1,48 @@
 package com.example.API.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
+import jakarta.transaction.Transactional;
 
 @Entity
+@Table(name = "student")
 public class Student {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.UUID) // ✅ Auto-generate UID
     private String uid;
-    private String classname;
+
     private String name;
-    private String Email;
-    private String Contact;
-    private Integer Batch_No;
-    private Integer groupNo;
-  
+    private String email;
+    private String contact;
+    private String gender;
+
+    @ManyToOne(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    @JoinColumn(name = "batch_id")
+    private Batch batch;
+
+    @ManyToOne(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    @JoinColumn(name = "group_id")
+    private Group group;
+
     public Student() {
     }
 
-   
-    public Student(String uid, String classname, String name, String email, String contact, Integer batch_No, Integer groupNo) {
-        this.uid = uid;
-        this.classname = classname;
+    public Student(String name, String email, String contact, String gender, Batch batch, Group group) {
         this.name = name;
-        this.Email = email;
-        this.Contact = contact;
-        this.Batch_No = batch_No;
-        this.groupNo = groupNo;
-
+        this.email = email;
+        this.contact = contact;
+        this.gender = gender;
+        this.batch = batch;
+        this.group = group;
     }
 
-    // Getters and setters
+    // ✅ Getters & Setters
     public String getUid() {
         return uid;
     }
 
     public void setUid(String uid) {
         this.uid = uid;
-    }
-
-    public String getClassname() {
-        return classname;
-    }
-
-    public void setClassname(String classname) {
-        this.classname = classname;
     }
 
     public String getName() {
@@ -56,33 +54,42 @@ public class Student {
     }
 
     public String getEmail() {
-        return Email;
+        return email;
     }
 
     public void setEmail(String email) {
-        this.Email = email;
+        this.email = email;
     }
 
     public String getContact() {
-        return Contact;
+        return contact;
     }
 
     public void setContact(String contact) {
-        this.Contact = contact;
+        this.contact = contact;
     }
 
-    public Integer getBatch_No() {
-        return Batch_No;
+    public String getGender() {
+        return gender;
     }
 
-    public void setBatch_No(Integer batch_No) {
-        this.Batch_No = batch_No;
+    public void setGender(String gender) {
+        this.gender = gender;
     }
-    
-    public Integer getGroupNo() {
-        return groupNo;
+
+    public Batch getBatch() {
+        return batch;
     }
-    public void setGroupNo(Integer groupNo) {
-        this.groupNo = groupNo;
+
+    public void setBatch(Batch batch) {
+        this.batch = batch;
+    }
+
+    public Group getGroup() {
+        return group;
+    }
+
+    public void setGroup(Group group) {
+        this.group = group;
     }
 }

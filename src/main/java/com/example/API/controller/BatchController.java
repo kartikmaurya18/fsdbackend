@@ -1,132 +1,125 @@
 package com.example.API.controller;
 
-import java.util.List;
-import java.util.Optional;
-import java.time.LocalDateTime;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import com.example.API.Repository.BatchRepository;
-import com.example.API.Response.ResponseBean;
 import com.example.API.entity.Batch;
+import com.example.API.entity.Student;  // ✅ Import Student entity
+import com.example.API.Repository.BatchRepository;
+import com.example.API.Repository.StudentRepository;  // ✅ Import StudentRepository
+import com.example.API.Response.ResponseBean;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/batches")
 public class BatchController {
 
     @Autowired
-    private BatchRepository batchRepo;
+    private BatchRepository batchRepository;
+
+    @Autowired
+    private StudentRepository studentRepository;  // ✅ Inject StudentRepository
 
     @Autowired
     private ResponseBean response;
 
     private static final Logger logger = LoggerFactory.getLogger(BatchController.class);
 
-    // Get all batches
+    // ✅ Get all batches
     @GetMapping(produces = "application/json")
-    public ResponseEntity<Object> getBatches() {
+    public ResponseEntity<Object> getAllBatches() {
         logger.info("Fetching all batches");
-        List<Batch> batchList = batchRepo.findAll();
+        List<Batch> batchList = batchRepository.findAll();
         response.setData(batchList);
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return ResponseEntity.ok(response);
     }
 
-    // Get a batch by number
-    @GetMapping(path = "/{batch_no}", produces = "application/json")
-    public ResponseEntity<Object> getBatchByNo(@PathVariable int batch_no) {
-        logger.info("Fetching batch with batch number: {}", batch_no);
-        Optional<Batch> batch = batchRepo.findById(batch_no);
+    // ✅ Get batch by ID
+    @GetMapping("/{batch_id}")
+    public ResponseEntity<Object> getBatchById(@PathVariable String batch_id) {
+        logger.info("Fetching batch with ID: {}", batch_id);
+        Optional<Batch> batch = batchRepository.findById(batch_id);
         if (batch.isPresent()) {
             response.setData(batch.get());
-            return new ResponseEntity<>(response, HttpStatus.OK);
+            return ResponseEntity.ok(response);
         } else {
-            response.setErrorCode("Batch not found");
-            logger.warn("Batch not found for batch number: {}", batch_no);
-            return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+            response.setErrorCode("ERR002");
+            response.setData("Batch with ID " + batch_id + " not found");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
         }
     }
 
-    // Create a new batch
+    // ✅ Get all students in a batch
+    @GetMapping("/{batch_id}/students")  // ✅ New endpoint
+    public ResponseEntity<Object> getStudentsByBatch(@PathVariable String batch_id) {
+        logger.info("Fetching all students in batch with ID: {}", batch_id);
+
+        // ✅ Check if batch exists
+        Optional<Batch> batch = batchRepository.findById(batch_id);
+        if (batch.isEmpty()) {
+            response.setErrorCode("ERR002");
+            response.setData("Batch with ID " + batch_id + " not found");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        }
+
+        // ✅ Fetch students belonging to the batch
+        List<Student> students = studentRepository.findByBatch_BatchId(batch_id);  // ✅ Using custom query method
+        response.setData(students);
+        return ResponseEntity.ok(response);
+    }
+
+    // ✅ Create a new batch
     @PostMapping(consumes = "application/json", produces = "application/json")
-    public ResponseEntity<Object> createBatch(@RequestBody Batch batch) {
-        try {
-            logger.info("Creating a new batch with batch number: {}", batch.getBatch_no());
-            // Set the created and modified date
-            LocalDateTime now = LocalDateTime.now();
-            batch.setCreated_date(now);
-            batch.setModified_date(now);
+    public ResponseEntity<Object> createBatch(@RequestBody Batch newBatch) {
+        logger.info("Creating a new batch for branch: {}", newBatch.getBranch());
 
-            Batch savedBatch = batchRepo.save(batch);
-            response.setErrorCode(null);
-            response.setData(savedBatch);
-            logger.info("Batch created successfully with batch number: {}", batch.getBatch_no());
-            return new ResponseEntity<>(response, HttpStatus.CREATED);
-        } catch (Exception e) {
-            logger.error("Error creating batch: {}", e.getMessage());
-            response.setErrorCode("ERR500");
-            response.setData("An error occurred while creating the batch.");
-            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        if (batchRepository.existsById(newBatch.getBatch_id())) {
+            response.setErrorCode("ERR005");
+            response.setData("Batch with ID " + newBatch.getBatch_id() + " already exists");
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
         }
+
+        Batch savedBatch = batchRepository.save(newBatch);
+        response.setData(savedBatch);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    // Update an existing batch
-    @PutMapping(path = "/{batch_no}", consumes = "application/json", produces = "application/json")
-    public ResponseEntity<Object> updateBatch(@PathVariable int batch_no, @RequestBody Batch batchDetails) {
-        logger.info("Updating batch with batch number: {}", batch_no);
-        try {
-            Optional<Batch> batch = batchRepo.findById(batch_no);
-            if (batch.isPresent()) {
-                Batch existingBatch = batch.get();
-                existingBatch.setBranch(batchDetails.getBranch());
-                existingBatch.setVenue(batchDetails.getVenue());
-                existingBatch.setCreated_by(batchDetails.getCreated_by());
-                existingBatch.setModified_by(batchDetails.getModified_by());
-                existingBatch.setModified_date(LocalDateTime.now()); // Update modified date
+    // ✅ Update an existing batch
+    @PutMapping("/{batch_id}")
+    public ResponseEntity<Object> updateBatch(@PathVariable String batch_id, @RequestBody Batch updatedBatch) {
+        logger.info("Updating batch with ID: {}", batch_id);
 
-                Batch updatedBatch = batchRepo.save(existingBatch);
-                response.setErrorCode(null);
-                response.setData(updatedBatch);
-                logger.info("Batch updated successfully with batch number: {}", batch_no);
-                return new ResponseEntity<>(response, HttpStatus.OK);
-            } else {
-                response.setErrorCode("Batch not found");
-                logger.warn("Batch not found for batch number: {}", batch_no);
-                return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
-            }
-        } catch (Exception e) {
-            logger.error("Error updating batch with batch number {}: {}", batch_no, e.getMessage());
-            response.setErrorCode("ERR500");
-            response.setData("An error occurred while updating the batch.");
-            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        if (!batchRepository.existsById(batch_id)) {
+            response.setErrorCode("ERR002");
+            response.setData("Batch with ID " + batch_id + " not found");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
         }
+
+        updatedBatch.setBatch_id(batch_id);
+        Batch savedBatch = batchRepository.save(updatedBatch);
+        response.setData(savedBatch);
+        return ResponseEntity.ok(response);
     }
 
-    // Delete a batch
-    @DeleteMapping(path = "/{batch_no}")
-    public ResponseEntity<Object> deleteBatch(@PathVariable int batch_no) {
-        logger.info("Deleting batch with batch number: {}", batch_no);
-        try {
-            if (batchRepo.existsById(batch_no)) {
-                batchRepo.deleteById(batch_no);
-                response.setErrorCode(null);
-                response.setData("Batch with number " + batch_no + " deleted successfully");
-                logger.info("Batch with batch number {} deleted successfully", batch_no);
-                return new ResponseEntity<>(response, HttpStatus.OK);
-            } else {
-                response.setErrorCode("Batch not found");
-                logger.warn("Batch not found for batch number: {}", batch_no);
-                return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
-            }
-        } catch (Exception e) {
-            logger.error("Error deleting batch with batch number {}: {}", batch_no, e.getMessage());
-            response.setErrorCode("ERR500");
-            response.setData("An error occurred while deleting the batch.");
-            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+    // ✅ Delete a batch
+    @DeleteMapping("/{batch_id}")
+    public ResponseEntity<Object> deleteBatch(@PathVariable String batch_id) {
+        logger.info("Deleting batch with ID: {}", batch_id);
+
+        if (!batchRepository.existsById(batch_id)) {
+            response.setErrorCode("ERR001");
+            response.setData("Batch with ID " + batch_id + " not found");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
         }
+
+        batchRepository.deleteById(batch_id);
+        response.setData("Batch with ID " + batch_id + " deleted successfully");
+        return ResponseEntity.ok(response);
     }
 }

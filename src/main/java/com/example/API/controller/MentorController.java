@@ -26,7 +26,14 @@ public class MentorController {
 
     private static final Logger logger = LoggerFactory.getLogger(MentorController.class);
 
-    // Get all mentors
+    // ✅ Method to generate mentor ID inside the controller
+    private String generateMentorId() {
+        String lastMentorId = mentorRepo.findLastMentorId();
+        int nextNumber = (lastMentorId == null) ? 1 : Integer.parseInt(lastMentorId.substring(3)) + 1;
+        return String.format("MEN%03d", nextNumber);
+    }
+
+    // ✅ Get all mentors
     @GetMapping(produces = "application/json")
     public ResponseEntity<Object> getMentors() {
         logger.info("Fetching all mentors");
@@ -35,7 +42,7 @@ public class MentorController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    // Get mentor by ID
+    // ✅ Get mentor by ID
     @GetMapping(path = "/{mentor_id}", produces = "application/json")
     public ResponseEntity<Object> getMentorById(@PathVariable String mentor_id) {
         logger.info("Fetching mentor with ID: {}", mentor_id);
@@ -50,15 +57,16 @@ public class MentorController {
         }
     }
 
-    // Create a new mentor
+    // ✅ Create a new mentor
     @PostMapping(consumes = "application/json", produces = "application/json")
     public ResponseEntity<Object> createMentor(@RequestBody Mentor mentor) {
         try {
-            logger.info("Creating a new mentor with ID: {}", mentor.getMentor_id());
+            logger.info("Creating a new mentor...");
+            mentor.setMentor_id(generateMentorId()); // Auto-generate ID before saving
             Mentor savedMentor = mentorRepo.save(mentor);
             response.setErrorCode(null);
             response.setData(savedMentor);
-            logger.info("Mentor created successfully with ID: {}", mentor.getMentor_id());
+            logger.info("Mentor created successfully with ID: {}", savedMentor.getMentor_id());
             return new ResponseEntity<>(response, HttpStatus.CREATED);
         } catch (Exception e) {
             logger.error("Error creating mentor: {}", e.getMessage());
@@ -68,7 +76,7 @@ public class MentorController {
         }
     }
 
-    // Update an existing mentor
+    // ✅ Update an existing mentor
     @PutMapping(path = "/{mentor_id}", consumes = "application/json", produces = "application/json")
     public ResponseEntity<Object> updateMentor(@PathVariable String mentor_id, @RequestBody Mentor mentorDetails) {
         logger.info("Updating mentor with ID: {}", mentor_id);
@@ -80,7 +88,7 @@ public class MentorController {
                 existingMentor.setContact(mentorDetails.getContact());
                 existingMentor.setEmail(mentorDetails.getEmail());
                 existingMentor.setDepartment(mentorDetails.getDepartment());
-                existingMentor.setCreated_by(mentorDetails.getCreated_by());
+                existingMentor.setSpecialization(mentorDetails.getSpecialization());
 
                 Mentor updatedMentor = mentorRepo.save(existingMentor);
                 response.setErrorCode(null);
@@ -100,7 +108,7 @@ public class MentorController {
         }
     }
 
-    // Delete a mentor
+    // ✅ Delete a mentor
     @DeleteMapping(path = "/{mentor_id}")
     public ResponseEntity<Object> deleteMentor(@PathVariable String mentor_id) {
         logger.info("Deleting mentor with ID: {}", mentor_id);

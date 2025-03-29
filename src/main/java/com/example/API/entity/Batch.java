@@ -1,43 +1,56 @@
 package com.example.API.entity;
 
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
+import jakarta.transaction.Transactional;
+import java.util.List;
 
 @Entity
 @Table(name = "batch") // Ensure this matches your database table name
 public class Batch {
 
     @Id
-    private int batch_no;
+    private String batchId;
     private String branch;
     private String venue;
-    private String created_by;
 
-    // Use LocalDateTime for date fields
-    private LocalDateTime created_date;
-    private String modified_by;
-    private LocalDateTime modified_date;
+    @OneToMany(mappedBy = "batch", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Student> students;
+
+    @OneToMany(mappedBy = "batch", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Mentor> mentors;
+
+    @OneToMany(mappedBy = "batch", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Group> groups;
 
     public Batch() {
     }
 
-    public Batch(int batch_no, String branch, String venue, String created_by, LocalDateTime created_date, String modified_by, LocalDateTime modified_date) {
-        this.batch_no = batch_no;
+    public Batch(String batchId, String branch, String venue) {
+        this.batchId = batchId;
         this.branch = branch;
         this.venue = venue;
-        this.created_by = created_by;
-        this.created_date = created_date;
-        this.modified_by = modified_by;
-        this.modified_date = modified_date;
+    }
+    
+    @PrePersist
+    @Transactional
+    public void generateBatchId() {
+        String lastBatchId = findLastBatchId();  // Fetch last batch ID
+        int nextNumber = (lastBatchId == null) ? 1 : Integer.parseInt(lastBatchId.substring(1)) + 1;
+        this.batchId = String.format("B%02d", nextNumber); // Format as B01, B02, etc.
     }
 
+    private String findLastBatchId() {
+        // Fetch last inserted batch ID (This requires a repository, inject it if needed)
+        return null;  // Placeholder, implement in service layer
+    }
+    
     // Getters and setters
-    public int getBatch_no() {
-        return batch_no;
+    public String getBatch_id() {
+        return batchId;
     }
 
-    public void setBatch_no(int batch_no) {
-        this.batch_no = batch_no;
+    public void setBatch_id(String batchId) {
+        this.batchId = batchId;
     }
 
     public String getBranch() {
@@ -56,35 +69,27 @@ public class Batch {
         this.venue = venue;
     }
 
-    public String getCreated_by() {
-        return created_by;
+    public List<Student> getStudents() {
+        return students;
     }
 
-    public void setCreated_by(String created_by) {
-        this.created_by = created_by;
+    public void setStudents(List<Student> students) {
+        this.students = students;
     }
 
-    public LocalDateTime getCreated_date() {
-        return created_date;
+    public List<Mentor> getMentors() {
+        return mentors;
     }
 
-    public void setCreated_date(LocalDateTime created_date) {
-        this.created_date = created_date;
+    public void setMentors(List<Mentor> mentors) {
+        this.mentors = mentors;
     }
 
-    public String getModified_by() {
-        return modified_by;
+    public List<Group> getGroups() {
+        return groups;
     }
 
-    public void setModified_by(String modified_by) {
-        this.modified_by = modified_by;
-    }
-
-    public LocalDateTime getModified_date() {
-        return modified_date;
-    }
-
-    public void setModified_date(LocalDateTime modified_date) {
-        this.modified_date = modified_date;
+    public void setGroups(List<Group> groups) {
+        this.groups = groups;
     }
 }
